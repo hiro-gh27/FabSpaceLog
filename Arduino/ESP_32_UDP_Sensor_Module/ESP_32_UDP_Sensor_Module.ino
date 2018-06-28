@@ -1,81 +1,76 @@
-/*
- *  This sketch sends random data over UDP on a ESP32 device
- *
- */
+
+// This example uses an ESP32 Development Board
+// to connect to shiftr.io.
+//
+// You can check on your device after a successful
+// connection here: https://shiftr.io/try.
+//
+// by Joël Gähwiler
+// https://github.com/256dpi/arduino-mqtt
+
 #include <WiFi.h>
-#include <WiFiUdp.h>
+#include <MQTT.h>
 
-// WiFi network name and password:
-const char * networkName = "your-ssid";
-const char * networkPswd = "your-password";
+const char ssid[] = "mac-book-air";
+const char pass[] = "fabspacefab";
+//const char ssid[] = "ssid";
+//const char pass[] = "password";
 
-//IP address to send UDP data to:
-// either use the ip address of the server or 
-// a network broadcast address
-const char * udpAddress = "192.168.0.255";
-const int udpPort = 3333;
+int p1 = 34;
 
-//Are we currently connected?
-boolean connected = false;
+WiFiClient net;
+MQTTClient client;
 
-//ESP32 analog port
-int pinnum = 34;
+unsigned long lastMillis = 0;
 
-//The udp library class
-WiFiUDP udp;
-
-void setup(){
-  // Initilize hardware serial:
-  Serial.begin(115200);
-  
-  //Connect to the WiFi network
-  connectToWiFi(networkName, networkPswd);
-}
-
-void loop(){
-  //get data in piezo sensor
-  int read_data = analogRead(pinnum);
-  
-  //only send data when connected
-  if(connected){
-    //Send a packet
-    udp.beginPacket(udpAddress,udpPort);
-    udp.printf("%d", read_data);
-    udp.endPacket();
+void connect() {
+  Serial.print("checking wifi...");
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(1000);
   }
-  //Wait for 1 second
-  delay(1000);
+
+  Serial.print("\nconnecting...");
+  while (!client.connect("arduino", "try", "try")) {
+    Serial.print(".");
+    delay(1000);
+  }
+
+  Serial.println("\nconnected!");
+
+  client.subscribe("/hello");
+  // client.unsubscribe("/hello");
 }
 
-void connectToWiFi(const char * ssid, const char * pwd){
-  Serial.println("Connecting to WiFi network: " + String(ssid));
-
-  // delete old config
-  WiFi.disconnect(true);
-  //register event handler
-  WiFi.onEvent(WiFiEvent);
-  
-  //Initiate connection
-  WiFi.begin(ssid, pwd);
-
-  Serial.println("Waiting for WIFI connection...");
+void messageReceived(String &topic, String &payload) {
+  Serial.println("incoming: " + topic + " - " + payload);
 }
 
-//wifi event handler
-void WiFiEvent(WiFiEvent_t event){
-    switch(event) {
-      case SYSTEM_EVENT_STA_GOT_IP:
-          //When connected set 
-          Serial.print("WiFi connected! IP address: ");
-          Serial.println(WiFi.localIP());  
-          //initializes the UDP state
-          //This initializes the transfer buffer
-          udp.begin(WiFi.localIP(),udpPort);
-          connected = true;
-          break;
-      case SYSTEM_EVENT_STA_DISCONNECTED:
-          Serial.println("WiFi lost connection");
-          connected = false;
-          break;
-    }
+void setup() {
+  Serial.begin(115200);
+  WiFi.begin(ssid, pass);
+
+  // Note: Local domain names (e.g. "Computer.local" on OSX) are not supported by Arduino.
+  // You need to set the IP address directly.
+  client.begin("192.168.2.2", net);
+  client.onMessage(messageReceived);
+
+  connect();
+}
+
+void loop() {
+  client.loop();
+  delay(10);  // <- fixes some issues with WiFi stability
+
+  int read = analogRead(p1);
+
+  if (!client.connected()) {
+    connect();
+  }
+
+  // publish a message roughly every second.
+  if (millis() - lastMillis > 1000) {
+    lastMillis = millis();
+    client.publish("/sensordata",(String)read);
+  }
 }
