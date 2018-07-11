@@ -11,8 +11,12 @@
 #include <WiFi.h>
 #include <MQTT.h>
 
-const char ssid[] = "ssid";
-const char pass[] = "password";
+const char ssid[] = "mac-book-air";
+const char pass[] = "fabspacefab";
+//const char ssid[] = "mac-book-air";
+//const char pass[] = "fabspacefab";
+
+int p1 = 34;
 
 WiFiClient net;
 MQTTClient client;
@@ -48,7 +52,7 @@ void setup() {
 
   // Note: Local domain names (e.g. "Computer.local" on OSX) are not supported by Arduino.
   // You need to set the IP address directly.
-  client.begin("your_ip_address", net);
+  client.begin("192.168.2.2", net);
   client.onMessage(messageReceived);
 
   connect();
@@ -58,6 +62,8 @@ void loop() {
   client.loop();
   delay(10);  // <- fixes some issues with WiFi stability
 
+  int read = analogRead(p1);
+
   if (!client.connected()) {
     connect();
   }
@@ -65,6 +71,6 @@ void loop() {
   // publish a message roughly every second.
   if (millis() - lastMillis > 1000) {
     lastMillis = millis();
-    client.publish("/hello", "Hello ESP32");
+    client.publish("/sensordata",(String)read);
   }
 }
