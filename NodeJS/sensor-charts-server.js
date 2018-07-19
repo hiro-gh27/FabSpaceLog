@@ -27,7 +27,7 @@ var sensor = new String("");
 /*
 ESP8266からのセンサの値の受信処理
 */
-var NODE_HOST = '172.20.10.15';
+var NODE_HOST = '169.254.24.226';
 var NODE_PORT = 8889
 var sensorAddr = new Array();
 for(var i = 0;i < set;i++){

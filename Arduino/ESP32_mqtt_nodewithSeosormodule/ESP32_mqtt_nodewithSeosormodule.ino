@@ -2,16 +2,30 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 
+const char* ssid = "mac-book-air";
+const char* password =  "fabspacefab";
+const char* mqttServer = "192.168.2.2";
+const int mqttPort = 1883;
+const char* mqttUser = "yourInstanceUsername";
+const char* mqttPassword = "yourInstancePassword";
+
+/*
 const char* ssid = "yourNetworkName";
 const char* password =  "yourNetworkPassword";
 const char* mqttServer = "m11.cloudmqtt.com";
 const int mqttPort = 12948;
 const char* mqttUser = "yourInstanceUsername";
 const char* mqttPassword = "yourInstancePassword";
+*/
 
-int x_pin = 32;
-int y_pin = 33;
-int z_pin = 34;
+const int x_pin = 32;
+const int y_pin = 33;
+const int z_pin = 34;
+const int analog_bit = 4096;
+const int hz = 1000;
+double x_offset;
+double y_offset;
+double z_offset;
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -19,7 +33,7 @@ PubSubClient client(espClient);
 void setup(){
   Serial.begin(115200);
   Serial.println();
-
+  
   WiFi.begin(ssid,password);
 
   while(WiFi.status() != WL_CONNECTED){
@@ -42,6 +56,11 @@ void setup(){
       delay(2000);
     }
   }
+  //calibration
+  x_offset = 0+readAccValue(x_pin,0);
+  y_offset = 0+readAccValue(y_pin,0);
+  z_offset = -9.8+readAccValue(z_pin,0);
+  
 }
 
 void loop(){
@@ -52,31 +71,31 @@ void loop(){
   JSONencoder["sensorType"] = "Accerarete";
   JsonArray& values = JSONencoder.createNestedArray("values");
 
-  values.add(readAccValue(x_pin));
-  values.add(readAccValue(y_pin));
-  values.add(readAccValue(z_pin));
-
-  char JSONamessageBuffer[100];
-  JSONencoder.printTo(JSONamessageBuffer, sizeof(JSONamessageBuffer));
+  values.add(readAccValue(x_pin,x_offset));
+  values.add(readAccValue(y_pin,y_offset));
+  values.add(readAccValue(z_pin,z_offset));
+  
+  char JSONmessageBuffer[300];
+  JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
   Serial.println("sending message to MQTT topic...");
-  Serial.println(JSONamessageBuffer);
+  Serial.println(JSONmessageBuffer);
 
-  if(client.publish("esp/test",JSONamessageBuffer) == true) {
+  if(client.publish("esp/test",JSONmessageBuffer) == true) {
     Serial.println("Success sending message");
   }else{
     Serial.println("Error sending message");
   }
   client.loop();
   Serial.println("---------");
-  delay(10000);
+  delay(hz);
 }
 
-double readAccValue(int pinNum){
+double readAccValue(int pinNum,double calib){
   double vdd = 3.3;
   double v_g = vdd / 10;
   double offset = vdd / 2;
   double val = analogRead(pinNum); //read
-  double offsetVal = ((val * vdd - offset) / v_g) - 0;
-  return offsetVal;
+  double offsetVal = (((val/analog_bit) * vdd - offset) / v_g) - 0;
+  return offsetVal - calib;
 }
 
