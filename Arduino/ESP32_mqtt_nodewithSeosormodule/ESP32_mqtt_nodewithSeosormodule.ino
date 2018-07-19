@@ -2,21 +2,14 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 
-const char* ssid = "mac-book-air";
-const char* password =  "fabspacefab";
-const char* mqttServer = "192.168.2.2";
-const int mqttPort = 1883;
-const char* mqttUser = "yourInstanceUsername";
-const char* mqttPassword = "yourInstancePassword";
 
-/*
 const char* ssid = "yourNetworkName";
 const char* password =  "yourNetworkPassword";
 const char* mqttServer = "m11.cloudmqtt.com";
 const int mqttPort = 12948;
 const char* mqttUser = "yourInstanceUsername";
 const char* mqttPassword = "yourInstancePassword";
-*/
+
 
 const int x_pin = 32;
 const int y_pin = 33;
